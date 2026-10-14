@@ -26,3 +26,16 @@ Pass/fail matches the Java runner, but all differences are reported rather than 
 ## Network
 
 `proxy.ts` adds `/__proxy/<url>` to the dev/preview server: avoids CORS and http mixed content (tx.fhir.org), and sends no `Accept-Language` unless the test sets one — browsers always send one, and servers may echo it (e.g. a `displayLanguage` expansion parameter), causing spurious failures. Direct mode (Settings) skips the proxy, for static hosting.
+
+## Deploy (Azure App Service)
+
+`server.mjs` is a dependency-free Node server that serves `dist/` and the proxy (`pnpm build && pnpm start` to try it locally on :8080). The proxy only reaches the three default hosts; set `PROXY_ALLOW_HOSTS` (comma-separated, or `*`) to change that.
+
+```sh
+az login
+APP=<unique-name> pnpm deploy:azure     # -> https://<unique-name>.azurewebsites.net
+az group delete -n icd11-tx-ui-rg       # tear down when finished
+```
+
+Options (env): `RG` (default `icd11-tx-ui-rg`), `LOCATION` (`australiaeast`), `SKU` (`B1`), `RUNTIME` (`NODE:22-lts`). Redeploy by re-running. To allow another server's host:
+`az webapp config appsettings set -g icd11-tx-ui-rg -n $APP --settings PROXY_ALLOW_HOSTS=host1,host2`
