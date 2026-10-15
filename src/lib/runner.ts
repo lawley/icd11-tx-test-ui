@@ -61,7 +61,13 @@ const OP_PATHS: Record<string, string> = {
   batch: '',
 };
 
-const FHIR_JSON = 'application/fhir+json';
+// Test files are R5: label requests as such and ask for R5 responses.
+const FHIR_JSON = 'application/fhir+json; fhirVersion=5.0';
+
+/** fhirVersion parameter of a response Content-Type, if any. */
+function contentFhirVersion(contentType: string | null): string | undefined {
+  return contentType ? /;\s*fhirVersion=([\d.]+)/i.exec(contentType)?.[1] : undefined;
+}
 
 export function proxied(url: string, useProxy: boolean): string {
   return useProxy ? `/__proxy/${encodeURIComponent(url)}` : url;
@@ -138,21 +144,29 @@ export function skipReason(suite: SuiteDef, test: TestDef, modes: Set<string>, f
 export async function buildRequest(suite: SuiteDef, test: TestDef, modes: Set<string>, source: TestSource) {
   const op = test.operation;
   const reqFile = chooseParam(test, 'request', modes);
-  let body: Json | undefined = reqFile ? structuredClone(await fetchJson(source, reqFile)) : undefined;
-  if (isObject(body) && body.resourceType === 'Parameters') {
-    const params = ((body.parameter as Json[]) ??= []);
+  const body: Json | undefined = reqFile ? structuredClone(await fetchJson(source, reqFile)) : undefined;
+  const setup = await Promise.all((suite.setup ?? []).map((f) => fetchJson(source, f)));
+  // TxTester.loadProfile: test profile, else parameters-default.json.
+  const profile = await fetchJson<JsonObject>(source, test.profile ?? 'parameters-default.json');
+  const profileParams = (profile.parameter as Json[] | undefined) ?? [];
+  const paramsOf = (r: Json | undefined) => (isObject(r) && r.resourceType === 'Parameters' ? ((r.parameter as Json[]) ??= []) : null);
+
+  if (op === 'batch') {
+    // Setup resources go in the first entry only; profile params in every entry.
+    const entries = isObject(body) ? ((body.entry as JsonObject[] | undefined) ?? []) : [];
+    const first = paramsOf(entries[0]?.resource);
+    for (const r of setup) first?.push({ name: 'tx-resource', resource: structuredClone(r) });
+    for (const e of entries) paramsOf(e.resource)?.push(...structuredClone(profileParams));
+    return body;
+  }
+
+  const params = paramsOf(body);
+  if (params) {
     if (test['lenient-display'] != null && (op === 'validate-code' || op === 'cs-validate-code')) {
       params.push({ name: 'lenient-display-validation', valueBoolean: !!test['lenient-display'] });
     }
-    if (op !== 'batch') {
-      for (const f of suite.setup ?? []) {
-        params.push({ name: 'tx-resource', resource: await fetchJson(source, f) });
-      }
-    }
-    if (test.profile) {
-      const profile = await fetchJson<JsonObject>(source, test.profile);
-      params.push(...(((profile.parameter as Json[]) ?? []) as Json[]));
-    }
+    for (const r of setup) params.push({ name: 'tx-resource', resource: structuredClone(r) });
+    params.push(...structuredClone(profileParams));
   }
   return body;
 }
@@ -221,7 +235,9 @@ export async function runTest(suite: SuiteDef, test: TestDef, server: ServerConf
       return { ...base, outcome: 'error', message: `Response is not JSON (HTTP ${res.status})` };
     }
     base.actual = actual;
-    const normalised = normaliseActual(actual, fhirVersion);
+    // Server's default version unless the response says what it actually is.
+    const respVersion = contentFhirVersion(res.headers.get('Content-Type')) ?? fhirVersion;
+    const normalised = normaliseActual(actual, respVersion);
     base.normalised = normalised;
     if (!isObject(normalised)) {
       return { ...base, outcome: 'error', message: 'Response is not a JSON object' };

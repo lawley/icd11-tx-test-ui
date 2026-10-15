@@ -14,7 +14,7 @@ Test cases are fetched live from GitHub (repo/ref configurable in Settings). Ser
 
 Mirrors the Java runner (`validator_cli.jar txTests`), ported from `TxTester`, `TxTesterScrubbers`, `TxTesterSorters` and `CompareUtilities` in hapifhir/org.hl7.fhir.core:
 
-- suite `setup` resources appended to each request as `tx-resource`; `profile`, `lenient-display`, `Accept-Language`, `header`, `request:{mode}`/`response:{mode}` honoured
+- suite `setup` resources appended to each request as `tx-resource` (batch: first entry only); `profile` (default `parameters-default.json`), `lenient-display`, `Accept-Language`, `header`, `request:{mode}`/`response:{mode}` honoured
 - FHIR version from `$versions` then `/metadata`; R4 responses converted to R5 (expansion property extensions)
 - actual response scrubbed (meta, text, `issue.diagnostics`, unmanaged extensions) and sorted, then matched against the expected template: `$uuid$`, `$instant$`, `$choice:…$`, `$fragments:…$`, `$external:N:…$`, `$optional$`, `$only$`, `$optional-properties$`, `$count-arrays$`, `$version$`, etc.; mode/version filters use the server's modes
 - `http-code` checked (`2xx` default)
