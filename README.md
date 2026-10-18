@@ -39,3 +39,7 @@ az group delete -n icd11-tx-ui-rg       # tear down when finished
 
 Options (env): `RG` (default `icd11-tx-ui-rg`), `LOCATION` (`australiaeast`), `SKU` (`B1`), `RUNTIME` (`NODE:22-lts`). Redeploy by re-running. To allow another server's host:
 `az webapp config appsettings set -g icd11-tx-ui-rg -n $APP --settings PROXY_ALLOW_HOSTS=host1,host2`
+
+## License
+
+Released into the public domain. See [LICENSE](LICENSE) (The Unlicense).
