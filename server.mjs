@@ -6,11 +6,9 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { proxyMiddleware } from './proxy.mjs';
+import { allowHostsFromEnv, proxyMiddleware } from './proxy.mjs';
 
-const DEFAULT_HOSTS = 'icdapi-fhir-testing-byfzd6budwdmbabf.northeurope-01.azurewebsites.net,tx.fhir.org,r4.ontoserver.csiro.au';
-const hostsEnv = (process.env.PROXY_ALLOW_HOSTS ?? DEFAULT_HOSTS).trim();
-const allowHosts = hostsEnv === '*' ? undefined : hostsEnv.split(',').map((h) => h.trim()).filter(Boolean);
+const allowHosts = allowHostsFromEnv();
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)), 'dist');
 const TYPES = {

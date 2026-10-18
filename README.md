@@ -25,7 +25,7 @@ Pass/fail matches the Java runner, but all differences are reported rather than 
 
 ## Network
 
-`proxy.ts` adds `/__proxy/<url>` to the dev/preview server: avoids CORS and http mixed content (tx.fhir.org), and sends no `Accept-Language` unless the test sets one — browsers always send one, and servers may echo it (e.g. a `displayLanguage` expansion parameter), causing spurious failures. Direct mode (Settings) skips the proxy, for static hosting.
+`proxy.mjs` adds `/__proxy/<url>` to the dev/preview server: avoids CORS and http mixed content (tx.fhir.org), and sends no `Accept-Language` unless the test sets one — browsers always send one, and servers may echo it (e.g. a `displayLanguage` expansion parameter), causing spurious failures. Direct mode (Settings) skips the proxy, for static hosting. The proxy only serves same-origin `fetch` (navigations and cross-site requests get 403), serves non-JSON responses as `text/plain`, and is limited to the hosts in `PROXY_ALLOW_HOSTS` (see below).
 
 ## Deploy (Azure App Service)
 

@@ -11,7 +11,23 @@ export const PROXY_PREFIX = '/__proxy/';
 const FORWARD = new Set(['accept', 'content-type', 'authorization', 'cache-control']);
 // x-* headers set by tests are forwarded; infrastructure ones (App Service, proxies) are not
 const INFRA_X = /^x-(tx-accept-language|forwarded|arr|ms-|client|waws|site|original|real-ip|appservice)/;
-const DROP_RES = new Set(['transfer-encoding', 'connection', 'set-cookie', 'access-control-allow-origin', 'access-control-allow-credentials']);
+const DROP_RES = new Set(['transfer-encoding', 'connection', 'set-cookie', 'access-control-allow-origin', 'access-control-allow-credentials', 'content-security-policy', 'x-content-type-options']);
+// The client only reads JSON; anything else (HTML, XML, SVG...) is served as text so an
+// upstream page can never run script on our origin.
+const SAFE_TYPE = /^\s*(application\/([\w.-]+\+)?json|text\/plain)\s*(;|$)/i;
+const DEFAULT_HOSTS = 'icdapi-fhir-testing-byfzd6budwdmbabf.northeurope-01.azurewebsites.net,tx.fhir.org,r4.ontoserver.csiro.au';
+
+/** PROXY_ALLOW_HOSTS (comma-separated, '*' = any) or the default hosts; undefined means any. */
+export function allowHostsFromEnv(env = process.env) {
+  const hosts = (env.PROXY_ALLOW_HOSTS ?? DEFAULT_HOSTS).trim();
+  return hosts === '*' ? undefined : hosts.split(',').map((h) => h.trim()).filter(Boolean);
+}
+
+/** Only the app's own fetch may use the proxy: no navigations, frames or cross-site requests. */
+function crossSite(req) {
+  const site = req.headers['sec-fetch-site'];
+  return req.headers['sec-fetch-mode'] === 'navigate' || (site !== undefined && site !== 'same-origin');
+}
 
 /**
  * @param {{ allowHosts?: string[] }} [opts] if allowHosts is given, only those hosts may be targeted
@@ -21,6 +37,12 @@ export function proxyMiddleware(opts = {}) {
   const allow = opts.allowHosts?.length ? new Set(opts.allowHosts.map((h) => h.toLowerCase())) : null;
   return (req, res, next) => {
     if (!req.url?.startsWith(PROXY_PREFIX)) return next();
+    if (crossSite(req)) {
+      res.statusCode = 403;
+      res.setHeader('content-type', 'text/plain');
+      res.end('Proxy is same-origin only');
+      return;
+    }
     let target;
     try {
       target = new URL(decodeURIComponent(req.url.slice(PROXY_PREFIX.length)));
@@ -51,6 +73,9 @@ export function proxyMiddleware(opts = {}) {
       for (const [k, v] of Object.entries(ur.headers)) {
         if (v !== undefined && !DROP_RES.has(k)) res.setHeader(k, v);
       }
+      if (!SAFE_TYPE.test(ur.headers['content-type'] ?? '')) res.setHeader('content-type', 'text/plain; charset=utf-8');
+      res.setHeader('x-content-type-options', 'nosniff');
+      res.setHeader('content-security-policy', "sandbox; default-src 'none'");
       ur.pipe(res);
     });
     upstream.on('timeout', () => upstream.destroy(new Error('upstream timeout')));
