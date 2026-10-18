@@ -236,6 +236,19 @@ table.aligned td.path { width: auto; min-width: 0; }
 .tabs { overflow-x: auto; scrollbar-width: none; }
 .tabs button { white-space: nowrap; flex-shrink: 0; }
 
+/* Test view scrolls as one (header, cards, tabs, panel); inner blocks grow to content
+   and only scroll sideways. Copes with small screens / high zoom. */
+.test-view { display: block; overflow: auto; margin: -14px -20px; padding: 14px 20px 40px; }
+.test-view .tabs { position: sticky; top: -14px; z-index: 3; background: var(--bg); padding-top: 4px; }
+.test-view .tab-panel, .test-view .fill, .test-view .scroll { display: block; overflow: visible; min-height: 0; }
+.test-view .table-wrap { overflow: visible; overflow-x: auto; }
+.test-view .raw-cols { grid-auto-rows: auto; overflow: visible; overflow-x: auto; }
+.test-view pre.json { max-height: none; overflow: visible; overflow-x: auto; }
+@media (max-width: 800px) {
+  .test-view { margin: 0; padding: 0; overflow: visible; }
+  .test-view .tabs { top: 0; }
+}
+
 /* sidebar hover preview */
 .test-preview {
   position: fixed; z-index: 50; width: min(520px, calc(100vw - 360px)); max-height: 70vh; overflow: auto;
