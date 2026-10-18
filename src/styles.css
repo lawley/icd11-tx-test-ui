@@ -235,3 +235,18 @@ table.aligned td.path { width: auto; min-width: 0; }
 @media (max-width: 800px) { table.aligned th:first-child { width: 200px; } }
 .tabs { overflow-x: auto; scrollbar-width: none; }
 .tabs button { white-space: nowrap; flex-shrink: 0; }
+
+/* sidebar hover preview */
+.test-preview {
+  position: fixed; z-index: 50; width: min(520px, calc(100vw - 360px)); max-height: 70vh; overflow: auto;
+  background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); padding: 10px 12px; pointer-events: none; font-size: 13px;
+}
+.test-preview .tp-name { font-family: var(--mono); font-size: 12.5px; font-weight: 600; }
+.test-preview .tp-desc { margin: 4px 0 6px; }
+.test-preview .tp-opts { font-size: 11.5px; color: var(--muted); margin: 4px 0; }
+.test-preview .tp-req {
+  margin: 6px 0 0; padding: 6px 8px; background: var(--panel-2); border-radius: 6px;
+  font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-all;
+}
+.test-preview .tp-target { font-weight: 600; }

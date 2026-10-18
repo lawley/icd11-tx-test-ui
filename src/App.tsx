@@ -172,6 +172,7 @@ export function App() {
           onTest={setTestName}
           results={results}
           servers={enabledServers}
+          source={source}
         />
         <main className="main">
           {!suites && !loadError && <div className="empty">Loading test cases…</div>}

@@ -48,7 +48,7 @@ export interface RunOptions {
   signal?: AbortSignal;
 }
 
-const OP_PATHS: Record<string, string> = {
+export const OP_PATHS: Record<string, string> = {
   expand: 'ValueSet/$expand',
   'validate-code': 'ValueSet/$validate-code',
   'cs-validate-code': 'CodeSystem/$validate-code',
