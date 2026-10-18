@@ -196,6 +196,9 @@ export function App() {
               servers={enabledServers}
               results={results[resultKey(suite.name, test.name)] ?? {}}
               onRun={() => runOne(suite, test)}
+              suiteRunning={batchRunning}
+              onRunSuite={runSuite}
+              onStopSuite={stop}
             />
           )}
         </main>

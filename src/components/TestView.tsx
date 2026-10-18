@@ -13,11 +13,14 @@ interface Props {
   servers: ServerConfig[];
   results: Record<string, RunResult | 'running'>;
   onRun: () => void;
+  suiteRunning: boolean;
+  onRunSuite: () => void;
+  onStopSuite: () => void;
 }
 
 type Tab = 'compare' | 'diffs' | 'raw' | 'request';
 
-export function TestView({ suite, test, source, servers, results, onRun }: Props) {
+export function TestView({ suite, test, source, servers, results, onRun, suiteRunning, onRunSuite, onStopSuite }: Props) {
   const [tab, setTab] = useState<Tab>('compare');
   const [expected, setExpected] = useState<Json | undefined>();
   const [request, setRequest] = useState<Json | undefined>();
@@ -64,6 +67,13 @@ export function TestView({ suite, test, source, servers, results, onRun }: Props
           {test.description && <p className="desc">{test.description}</p>}
         </div>
         <div className="actions">
+          {suiteRunning ? (
+            <button onClick={onStopSuite}>Stop suite</button>
+          ) : (
+            <button onClick={onRunSuite} title={`Run all ${suite.tests.length} tests in ${suite.name}, staying on this test`}>
+              Re-run suite
+            </button>
+          )}
           <button className="primary" onClick={onRun} disabled={running}>
             {running ? 'Running…' : done.length ? 'Re-run' : 'Run'}
           </button>

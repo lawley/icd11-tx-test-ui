@@ -117,7 +117,7 @@ input, select {
 .main { flex: 1; overflow: auto; padding: 16px 20px 40px; min-width: 0; }
 .empty { color: var(--muted); padding: 40px; text-align: center; }
 .view-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 14px; }
-.view-head .actions { flex-shrink: 0; }
+.view-head .actions { flex-shrink: 0; display: flex; gap: 8px; align-items: center; }
 .desc { margin: 8px 0 0; max-width: 90ch; }
 .meta-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .chip { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--border); text-decoration: none; color: var(--text); }
