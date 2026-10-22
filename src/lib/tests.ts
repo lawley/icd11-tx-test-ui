@@ -15,6 +15,8 @@ export interface TestDef {
   modes?: string[] | string;
   version?: string;
   disabled?: boolean;
+  /** Comma separated features the server must declare (see features.ts). */
+  feature?: string;
   header?: { name: string; value: string; mode?: string };
   [k: string]: unknown;
 }
@@ -25,6 +27,7 @@ export interface SuiteDef {
   mode?: string;
   modes?: string[] | string;
   setup?: string[];
+  feature?: string;
   tests: TestDef[];
   disabled?: boolean;
 }

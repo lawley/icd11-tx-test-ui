@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { clearCache, DEFAULT_SOURCE, loadSuites, type SuiteDef, type TestDef, type TestSource } from './lib/tests';
-import { clearVersionCache, runTest, type RunResult } from './lib/runner';
+import { clearServerCache, runTest, type RunResult } from './lib/runner';
 import { loadServers, saveServers, type ServerConfig } from './lib/servers';
 import { Sidebar } from './components/Sidebar';
 import { TestView } from './components/TestView';
@@ -122,7 +122,7 @@ export function App() {
   const updateServers = (s: ServerConfig[]) => {
     setServers(s);
     saveServers(s);
-    clearVersionCache();
+    clearServerCache();
   };
   const updateSource = (s: TestSource) => {
     try {
@@ -139,7 +139,7 @@ export function App() {
     } catch {
       /* ignore */
     }
-    clearVersionCache();
+    clearServerCache();
     setUseProxy(v);
   };
 

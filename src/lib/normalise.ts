@@ -202,24 +202,51 @@ function sortExtensions(list: Json[] | undefined) {
   list.sort((a, b) => cmp(str((a as JsonObject).url), str((b as JsonObject).url)));
 }
 
+/** The lower-cased primitive value of the named part, or '' if there isn't one, so a missing part sorts first. */
+const partSortValue = (p: JsonObject, name: string): string => (primitiveValue(part(p, name)) ?? '').toLowerCase();
+
+/**
+ * What a property or subproperty sorts by, after its code (TxTesterSorters.propertySortValue):
+ * its value - a primitive as is, a Coding as system|code - or, when it has no value of its own
+ * (a property that only carries subproperties, like ICD-11's postcoordination), its
+ * subproperties' codes and values in their own (already sorted) order. Without that, repeated
+ * properties that differ only below their code stay in whatever order the server sent them.
+ */
+function propertySortValue(p: JsonObject): string | null {
+  const v = part(p, 'value');
+  if (v) {
+    const prim = primitiveValue(v);
+    if (prim !== undefined) return prim.toLowerCase();
+    if (isObject(v.valueCoding)) return `${str(v.valueCoding.system)}|${str(v.valueCoding.code)}`.toLowerCase();
+    return null;
+  }
+  let b = '';
+  for (const sp of (p.part as JsonObject[] | undefined) ?? []) {
+    const code = sp.name === 'subproperty' ? primitiveValue(part(sp, 'code')) : undefined;
+    if (code !== undefined) b += `${code.toLowerCase()}=${propertySortValue(sp) ?? ''};`;
+  }
+  return b || null;
+}
+
 function parameterCompare(o1: JsonObject, o2: JsonObject): number {
   const n1 = str(o1.name);
   const n2 = str(o2.name);
-  if (n1 === n2 && n1 === 'property') {
-    const c1 = (primitiveValue(part(o1, 'code')) ?? '').toLowerCase();
-    const c2 = (primitiveValue(part(o2, 'code')) ?? '').toLowerCase();
+  // the parts (and extensions) are already sorted - see sortParameterList
+  if (n1 === n2 && (n1 === 'property' || n1 === 'subproperty')) {
+    const c1 = partSortValue(o1, 'code');
+    const c2 = partSortValue(o2, 'code');
     if (c1 !== c2) return cmp(c1, c2);
-    const v1 = primitiveValue(part(o1, 'value'))?.toLowerCase();
-    const v2 = primitiveValue(part(o2, 'value'))?.toLowerCase();
-    if (v1 != null && v2 != null && v1 !== v2) return cmp(v1, v2);
+    const v1 = propertySortValue(o1) ?? '';
+    const v2 = propertySortValue(o2) ?? '';
+    if (v1 !== v2) return cmp(v1, v2);
   }
   if (n1 === n2 && n1 === 'designation') {
-    const c1 = (primitiveValue(part(o1, 'language')) ?? '').toLowerCase();
-    const c2 = (primitiveValue(part(o2, 'language')) ?? '').toLowerCase();
+    const c1 = partSortValue(o1, 'language');
+    const c2 = partSortValue(o2, 'language');
     if (c1 !== c2) return cmp(c1, c2);
-    const v1 = primitiveValue(part(o1, 'value'))?.toLowerCase();
-    const v2 = primitiveValue(part(o2, 'value'))?.toLowerCase();
-    if (v1 != null && v2 != null && v1 !== v2) return cmp(v1, v2);
+    const v1 = partSortValue(o1, 'value');
+    const v2 = partSortValue(o2, 'value');
+    if (v1 !== v2) return cmp(v1, v2);
   }
   return cmp(n1, n2);
 }

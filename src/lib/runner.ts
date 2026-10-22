@@ -1,5 +1,6 @@
 // Executes one tx-ecosystem test against one server, the way TxTester does.
 import { compareJson, isObject, type CompareResult, type Json, type JsonObject } from './compare';
+import { featureGate, featuresFor } from './features';
 import { normaliseActual } from './normalise';
 import type { ServerConfig } from './servers';
 import {
@@ -107,8 +108,27 @@ export function serverFhirVersion(server: ServerConfig, useProxy: boolean): Prom
   return p;
 }
 
-export function clearVersionCache() {
+const featuresCache = new Map<string, Promise<Set<string>>>();
+
+/** The features the server declares in its CapabilityStatement (TxTester.featuresFor). */
+export function serverFeatures(server: ServerConfig, useProxy: boolean): Promise<Set<string>> {
+  const key = `${server.base}|${useProxy}`;
+  let p = featuresCache.get(key);
+  if (!p) {
+    p = (async () => {
+      const r = await fetch(proxied(join(server.base, 'metadata'), useProxy), { headers: { Accept: FHIR_JSON } });
+      if (!r.ok) throw new Error(`metadata: HTTP ${r.status}`);
+      return featuresFor((await r.json()) as Json);
+    })();
+    p.catch(() => featuresCache.delete(key));
+    featuresCache.set(key, p);
+  }
+  return p;
+}
+
+export function clearServerCache() {
   versionCache.clear();
+  featuresCache.clear();
 }
 
 const externalsCache = new Map<string, Promise<Record<string, Record<string, string>> | null>>();
@@ -130,13 +150,24 @@ function httpCodeOk(tcode: string, code: number): boolean {
   return String(code) === tcode;
 }
 
-/** Why a test would not run for a server (mode/version gates), or null. */
-export function skipReason(suite: SuiteDef, test: TestDef, modes: Set<string>, fhirVersion?: string): string | null {
+/** Why a test would not run for a server (mode/version/feature gates), or null. */
+export function skipReason(
+  suite: SuiteDef,
+  test: TestDef,
+  modes: Set<string>,
+  fhirVersion?: string,
+  features?: Set<string>,
+): string | null {
   if (suite.disabled || test.disabled) return 'disabled';
   if (!passesModes(suite, modes)) return `suite needs mode ${suite.mode ?? suite.modes}`;
   if (!passesModes(test, modes)) return `test needs mode ${test.mode ?? test.modes}`;
   if (fhirVersion && test.version && !versionGateMatches(test.version, fhirVersion)) {
     return `test is for FHIR ${test.version}, server is ${fhirVersion}`;
+  }
+  // features come from the server's CapabilityStatement, so they can only be checked once it is read
+  if (features) {
+    const gate = featureGate(suite, test, features);
+    if (gate) return gate;
   }
   return null;
 }
@@ -181,9 +212,12 @@ export async function runTest(suite: SuiteDef, test: TestDef, server: ServerConf
     at: new Date().toISOString(),
   };
   try {
-    const fhirVersion = await serverFhirVersion(server, opts.useProxy);
+    const [fhirVersion, features] = await Promise.all([
+      serverFhirVersion(server, opts.useProxy),
+      serverFeatures(server, opts.useProxy),
+    ]);
     base.fhirVersion = fhirVersion;
-    const skip = skipReason(suite, test, modes, fhirVersion);
+    const skip = skipReason(suite, test, modes, fhirVersion, features);
     if (skip) return { ...base, outcome: 'skipped', message: skip };
 
     const respFile = chooseParam(test, 'response', modes);
