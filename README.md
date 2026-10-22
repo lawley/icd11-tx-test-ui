@@ -16,7 +16,8 @@ Mirrors the Java runner (`validator_cli.jar txTests`), ported from `TxTester`, `
 
 - suite `setup` resources appended to each request as `tx-resource` (batch: first entry only); `profile` (default `parameters-default.json`), `lenient-display`, `Accept-Language`, `header`, `request:{mode}`/`response:{mode}` honoured
 - FHIR version from `$versions` then `/metadata`; R4 responses converted to R5 (expansion property extensions)
-- actual response scrubbed (meta, text, `issue.diagnostics`, unmanaged extensions) and sorted, then matched against the expected template: `$uuid$`, `$instant$`, `$choice:…$`, `$fragments:…$`, `$external:N:…$`, `$optional$`, `$only$`, `$optional-properties$`, `$count-arrays$`, `$version$`, etc.; mode/version filters use the server's modes
+- `feature` on a suite or test (`translate`, `closure`, `tx-resource`, ...) checked against what the server declares in its CapabilityStatement: an operation anywhere, by name or by definition, or the CodeSystemAsParameter feature; a test needing a feature the server doesn't declare is skipped
+- actual response scrubbed (meta, text, `issue.diagnostics`, unmanaged extensions) and sorted at every level (properties and subproperties by code, then by value, or by their subproperties when they have no value), then matched against the expected template: `$uuid$`, `$instant$`, `$choice:…$`, `$fragments:…$`, `$external:N:…$`, `$optional$`, `$only$`, `$optional-properties$`, `$count-arrays$`, `$version$`, etc.; mode/version filters use the server's modes
 - `http-code` checked (`2xx` default)
 
 Pass/fail matches the Java runner, but all differences are reported rather than only the first.
